@@ -1,4 +1,6 @@
 See https://community.volumio.com/t/guide-volumio-bluetooth-receiver/7859
+
+
 Thanks wolfg1969 https://gist.github.com/wolfg1969/32c3798626ad44ffd4c453114a66ffbe
 
 Install dependencies:
