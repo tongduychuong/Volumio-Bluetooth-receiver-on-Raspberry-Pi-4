@@ -3,39 +3,7 @@ See https://community.volumio.com/t/guide-volumio-bluetooth-receiver/7859
 
 Thanks wolfg1969 https://gist.github.com/wolfg1969/32c3798626ad44ffd4c453114a66ffbe
 
-Install dependencies:
-```bash
-sudo apt-get update 
-sudo apt-get install dh-autoreconf libasound2-dev libortp-dev pi-bluetooth
-sudo apt-get install libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libsbc1 libsbc-dev
-```
-
-Compile Bluez 5.51:
-```bash
-git clone git://git.kernel.org/pub/scm/bluetooth/bluez.git
-cd bluez
-git checkout 5.51
-./bootstrap
-./configure --enable-library --enable-experimental --enable-tools
-make
-sudo make install
-
-sudo ln -s /usr/local/lib/libbluetooth.so.3.19.0 /usr/lib/arm-linux-gnueabihf/libbluetooth.so
-sudo ln -s /usr/local/lib/libbluetooth.so.3.19.0 /usr/lib/arm-linux-gnueabihf/libbluetooth.so.3
-sudo ln -s /usr/local/lib/libbluetooth.so.3.19.0 /usr/lib/arm-linux-gnueabihf/libbluetooth.so.3.19.0
-```
-Compile Bluez-Alsa
-```bash
-cd
-git clone https://github.com/Arkq/bluez-alsa.git
-cd bluez-alsa
-git checkout v4.0.0
-autoreconf --install
-mkdir build && cd build
-../configure --disable-hcitop --with-alsaplugindir=/usr/lib/arm-linux-gnueabihf/alsa-lib 
-make
-sudo make install
-```
+Set Audio Outout to Hifiberry DAC (my device)
 
 Configure Bluetooth subsystem:
 
@@ -51,64 +19,27 @@ Class = 0x200428
 Enable = Source,Sink,Media,Socket
 ```
 
-0x200428 - Hifi Audio Device, see http://bluetooth-pentest.narod.ru/software/bluetooth_class_of_device-service_generator.html
+Set bluealsa-aplay as a service:
+Create file `/lib/systemd/system/a2dp-playback.service`
 
-Update file `/etc/bluetooth/main.conf`
-
-```bash
-sudo nano /etc/bluetooth/main.conf
-```
-add
-
-```
-[General]
-Class = 0x200428
-```
-
-Automate BluezAlsa:
-Set BlueAlsa as a service
-Create file `/lib/systemd/system/bluealsa.service`
-```bash
-sudo nano /lib/systemd/system/bluealsa.service
+sudo nano /lib/systemd/system/a2dp-playback.service
 ```
 Add
 ```
 [Unit]
-Description=BluezAlsa proxy
-Requires=bluetooth.service
-After=bluetooth.service
+Description=A2DP Playback
+After=modep-mod-host.service
+Requires=modep-mod-host.service
 
 [Service]
-Type=simple
-User=root
-Group=audio
-ExecStart=/usr/bin/bluealsa -p a2dp-source -p a2dp-sink
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable BluezAlsa starts from boot:
-```bash
-sudo systemctl daemon-reload && sudo systemctl enable bluealsa.service
-```
-Set bluealsa-aplay as a service:
-Create file `/lib/systemd/system/bluealsa-aplay@.service`
-hw2:0 is the hifiberry audio device I want to use. There may be better way to link it. Use `aplay -l` or `aplay -L` to find the device (https://superuser.com/questions/53957/what-do-alsa-devices-like-hw0-0-mean-how-do-i-figure-out-which-to-use).
-```bash
-sudo nano /lib/systemd/system/bluealsa-aplay@.service
-```
-Add
-```
-[Unit] 
-Description=BlueAlsa-Aplay %I -Dhw:2,0
-Requires=bluetooth.service bluealsa.service
-
-[Service]
-Type=simple
+Environment=JACK_PROMISCUOUS_SERVER=jack
+ExecStartPre=/bin/sleep 3
+ExecStart=/usr/bin/bluealsa-aplay
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=A2DP-Playback
 User=volumio
-Group=audio
-ExecStart=/usr/bin/bluealsa-aplay %I -Dhw:2,0
+
 [Install]
 WantedBy=multi-user.target
 ```
