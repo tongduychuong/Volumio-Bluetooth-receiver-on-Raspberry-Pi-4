@@ -45,7 +45,7 @@ User=volumio
 WantedBy=multi-user.target
 ```
 ```bash
-sudo systemctl daemon-reload
+sudo systemctl daemon-reload && sudo systemctl enable a2dp-playback.service
 ```
 
 REBOOT
